@@ -1,0 +1,172 @@
+{
+  "title": "Controllo di regolarità degli atti – mia versione",
+  "description": "Comune di Borgoverde (inventato) · Livello 5 del cruscotto dell'ufficio: la lista di controllo delle determinazioni, con l'esito e la nota al responsabile.",
+  "accent": "indigo",
+  "pages": [
+    {
+      "id": "controllo",
+      "title": "Controllo successivo",
+      "description": "Incolla una determinazione o scegli un esempio, poi «Proponi le risposte»: le risposte restano modificabili. L'esito e la nota si aggiornano da soli.",
+      "metrics": [],
+      "columns": [],
+      "rows": [],
+      "form": [],
+      "kind": "checklist",
+      "checklist": {
+        "heading": "Controllo successivo ai sensi dell'articolo 147-bis del decreto legislativo 18 agosto 2000, n. 267. Attenzione: l'intelligenza artificiale può sbagliare, verifica sempre.",
+        "items": [
+          {
+            "label": "Competenza: l'atto è firmato da chi ne ha il potere",
+            "critical": true,
+            "hint": "L'atto non risulta firmato dal Responsabile di Area.",
+            "auto": {
+              "scope": "firma",
+              "no": [
+                "Il Sindaco"
+              ],
+              "yes": [
+                "Responsabile di Area"
+              ],
+              "notes": [
+                {
+                  "when": "Il Sindaco",
+                  "text": "L'atto è firmato dal Sindaco, che non adotta atti di gestione (articolo 107 del decreto legislativo 18 agosto 2000, n. 267)."
+                }
+              ]
+            }
+          },
+          {
+            "label": "Richiamo corretto delle norme",
+            "hint": "Le norme non sono richiamate.",
+            "auto": {
+              "yes": [
+                "decreto legislativo"
+              ]
+            }
+          },
+          {
+            "label": "Motivazione adeguata",
+            "hint": "La motivazione non è indicata.",
+            "auto": {
+              "yes": [
+                "premesso",
+                "motivaz",
+                "necessari"
+              ]
+            }
+          },
+          {
+            "label": "Copertura finanziaria e impegno di spesa",
+            "critical": true,
+            "hint": "Mancano la copertura finanziaria o l'impegno di spesa.",
+            "auto": {
+              "yesAll": [
+                "copertura",
+                "impegnare"
+              ],
+              "notes": [
+                {
+                  "when": "successivo provvedimento",
+                  "text": "La spesa è rinviata a un successivo provvedimento: manca la copertura finanziaria."
+                }
+              ]
+            }
+          },
+          {
+            "label": "Codice identificativo di gara indicato",
+            "hint": "Il codice identificativo di gara non è indicato.",
+            "auto": {
+              "codeAfter": {
+                "text": "codice identificativo di gara",
+                "length": 10
+              }
+            }
+          },
+          {
+            "label": "Rispetto della rotazione del fornitore",
+            "hint": "Il rispetto della rotazione non è dichiarato.",
+            "auto": {
+              "no": [
+                "già svolto"
+              ],
+              "yes": [
+                "rotazione"
+              ],
+              "notes": [
+                {
+                  "when": "già svolto",
+                  "text": "Il fornitore ha già svolto il servizio: la rotazione non è rispettata."
+                }
+              ]
+            }
+          },
+          {
+            "label": "Dichiarazione sul conflitto di interessi",
+            "hint": "Manca la dichiarazione sul conflitto di interessi.",
+            "auto": {
+              "yes": [
+                "conflitto di interess"
+              ]
+            }
+          },
+          {
+            "label": "Obblighi di pubblicazione",
+            "hint": "Manca la pubblicazione in Amministrazione trasparente.",
+            "auto": {
+              "yes": [
+                "Amministrazione trasparente"
+              ],
+              "notes": [
+                {
+                  "when": "albo pretorio",
+                  "text": "Pubblicazione solo all'albo pretorio: manca Amministrazione trasparente."
+                }
+              ]
+            }
+          },
+          {
+            "label": "Chiarezza del dispositivo",
+            "hint": "Il dispositivo non è diviso in punti numerati.",
+            "auto": {
+              "listAfterLine": "DETERMINA"
+            }
+          },
+          {
+            "label": "Firma e data",
+            "hint": "Manca la data accanto alla firma.",
+            "auto": {
+              "scope": "firma",
+              "date": true
+            }
+          }
+        ],
+        "irregularAbove": 2,
+        "signature": "Il Segretario comunale",
+        "noteSubject": "esito del controllo successivo di regolarità amministrativa",
+        "noteReference": "articolo 147-bis del decreto legislativo 18 agosto 2000, n. 267",
+        "documents": [
+          {
+            "label": "Determina A",
+            "title": "Determinazione n. 41/2026 – Fornitura di cancelleria",
+            "text": "DETERMINAZIONE N. 41/2026\nOGGETTO: Fornitura di cancelleria per gli uffici. Affidamento diretto a Rossi Srl. Codice identificativo di gara B7K2M9P4Q1.\nIL RESPONSABILE DI AREA\nVisti l'articolo 107 del decreto legislativo 18 agosto 2000, n. 267, l'articolo 183 del medesimo decreto e l'articolo 50, comma 1, lettera b), del decreto legislativo 31 marzo 2023, n. 36; visto il decreto sindacale di nomina.\nPremesso che la fornitura è necessaria per il funzionamento degli uffici; che il fornitore è stato individuato dopo un confronto tra tre preventivi; che il prezzo è congruo; che il fornitore non è l'affidatario uscente, nel rispetto della rotazione.\nDato atto che non sussistono situazioni di conflitto di interessi; che la spesa trova copertura sul capitolo 1010 del bilancio.\nDETERMINA\n1. di affidare a Rossi Srl la fornitura per euro 3.650,00 oltre IVA;\n2. di impegnare euro 4.453,00 sul capitolo 1010;\n3. di pubblicare l'atto in Amministrazione trasparente ai sensi del decreto legislativo 14 marzo 2013, n. 33.\nIl Responsabile di Area – Marco Verdi – 12 marzo 2026"
+          },
+          {
+            "label": "Determina B",
+            "title": "Determinazione n. 57/2026 – Manutenzione delle strade",
+            "text": "DETERMINAZIONE N. 57/2026\nOGGETTO: Manutenzione delle strade comunali. Affidamento a Edil Verde Snc.\nIL RESPONSABILE DI AREA\nVisto l'articolo 107 del decreto legislativo 18 agosto 2000, n. 267; visto il decreto legislativo 31 marzo 2023, n. 36.\nPremesso che occorre intervenire sulle strade; che la ditta Edil Verde Snc ha già svolto il servizio negli anni 2024 e 2025 con soddisfazione.\nDETERMINA\n1. di affidare a Edil Verde Snc i lavori per euro 31.200,00 oltre IVA;\n2. di dare atto che la spesa sarà finanziata con successivo provvedimento;\n3. di pubblicare l'atto all'albo pretorio.\nIl Responsabile di Area – Marco Verdi – 3 aprile 2026"
+          },
+          {
+            "label": "Determina C",
+            "title": "Determinazione n. 63/2026 – Rinnovo del software di protocollo",
+            "text": "DETERMINAZIONE N. 63/2026\nOGGETTO: Rinnovo del software di protocollo. Affidamento diretto a Info Pa Srl. Codice identificativo di gara B4R5T6Y7U8.\nIL SINDACO\nVisti l'articolo 107 e l'articolo 183 del decreto legislativo 18 agosto 2000, n. 267; visto l'articolo 50, comma 1, lettera b), del decreto legislativo 31 marzo 2023, n. 36.\nPremesso che il software è indispensabile per la gestione del protocollo informatico; che il prezzo è stato confrontato con quello di altri due operatori; che si applica la rotazione.\nDato atto che non sussistono situazioni di conflitto di interessi; che la spesa trova copertura sul capitolo 1080.\nDETERMINA\n1. di affidare a Info Pa Srl il servizio per euro 12.400,00 oltre IVA;\n2. di impegnare euro 15.128,00 sul capitolo 1080;\n3. di pubblicare l'atto in Amministrazione trasparente ai sensi del decreto legislativo 14 marzo 2013, n. 33.\nIl Sindaco – 20 aprile 2026"
+          },
+          {
+            "label": "Determina D",
+            "title": "Determinazione n. 87/2026 – Abbattimento di un albero pericolante",
+            "text": "COMUNE DI BORGOVERDE\nArea Tecnica\n\nDETERMINAZIONE N. 87/2026\n\nOGGETTO: ABBATTIMENTO DI UN ALBERO PERICOLANTE NELL'AREA VERDE DI VIA DEI TIGLI. AFFIDAMENTO DIRETTO A VERDE SICURO SRL. CODICE IDENTIFICATIVO DI GARA B7T4R2S9Q1.\n\nIL RESPONSABILE DI AREA\n\nPREMESSO che:\n- con deliberazione n. 48 del 16 dicembre 2025 il Consiglio comunale ha approvato il Documento unico di programmazione 2026-2028, che nell'obiettivo strategico «Urbanistica e lavori pubblici» prevede l'obiettivo operativo n. 12 «Garantire la manutenzione ordinaria e straordinaria delle strade»;\n- con deliberazione n. 49 del 16 dicembre 2025 il Consiglio comunale ha approvato il bilancio di previsione 2026-2028;\n- con deliberazione n. 3 del 20 gennaio 2026 la Giunta comunale ha approvato il Piano esecutivo di gestione 2026-2028 e assegnato ai Responsabili di Area le risorse umane, finanziarie e strumentali;\n- con deliberazione n. 15 del 17 marzo 2026 la Giunta comunale ha approvato il Piano integrato di attività e organizzazione 2026-2028;\n- l'articolo 13 del decreto legislativo 18 agosto 2000, n. 267, recante il «Testo unico delle leggi sull'ordinamento degli enti locali», attribuisce al Comune le funzioni amministrative che riguardano la popolazione e il territorio comunale;\n\nCONSIDERATO che in seguito al fortunale dei giorni scorsi è necessario intervenire rapidamente con l'abbattimento dell'albero, che versa in gravi condizioni di pericolo perché le radici sono state danneggiate e la stabilità della pianta è compromessa;\n\nDATO ATTO che il valore complessivo dell'appalto è stimabile in 3.200,00 euro;\n\nVISTO l'articolo 192 del decreto legislativo 18 agosto 2000, n. 267, secondo il quale la stipulazione dei contratti deve essere preceduta da una determinazione del responsabile del procedimento di spesa che indichi il fine del contratto, il suo oggetto, la forma, le clausole essenziali e le modalità di scelta del contraente;\n\nVISTO il decreto legislativo 31 marzo 2023, n. 36, recante il «Codice dei contratti pubblici», e in particolare:\n- gli articoli da 1 a 12, che enunciano i principi generali, tra cui il principio del risultato e il principio della fiducia;\n- gli articoli 7, comma 1, e 8, comma 1, sull'organizzazione autonoma delle prestazioni e sull'autonomia contrattuale delle pubbliche amministrazioni;\n- l'articolo 15, insieme all'allegato I.2, sull'individuazione del Responsabile unico del progetto;\n- l'articolo 17, che prevede, nel caso di affidamento diretto, l'individuazione dell'oggetto, dell'importo e del contraente, con le ragioni della scelta e i requisiti richiesti;\n- l'articolo 18, comma 10, e l'allegato I.4, che esentano dall'imposta di bollo gli affidamenti di importo inferiore a 40.000 euro;\n\nATTESO che l'articolo 50, comma 1, del «Codice dei contratti pubblici» consente l'affidamento diretto dei servizi e delle forniture di importo inferiore a 140.000 euro, anche senza consultazione di più operatori economici, scegliendo soggetti con documentate esperienze pregresse idonee all'esecuzione delle prestazioni;\n\nVISTI altresì:\n- l'articolo 52 del «Codice dei contratti pubblici», secondo il quale negli affidamenti diretti di importo inferiore a 40.000 euro gli operatori economici attestano il possesso dei requisiti con dichiarazione sostitutiva di atto di notorietà, verificata dalla stazione appaltante anche a campione;\n- l'articolo 62, comma 1, che consente a tutte le stazioni appaltanti di acquisire direttamente forniture e servizi di importo non superiore alle soglie degli affidamenti diretti;\n\nCONSIDERATO che l'oggetto dell'appalto non riguarda categorie merceologiche per le quali è obbligatorio il ricorso al Mercato elettronico della pubblica amministrazione e che l'affidamento è di importo inferiore a 5.000 euro, per cui si può procedere fuori dal Mercato elettronico, garantendo la digitalizzazione dell'appalto anche con la posta elettronica certificata;\n\nVISTA la nota con la quale il Presidente dell'Autorità nazionale anticorruzione ha prorogato l'utilizzo dell'interfaccia web della piattaforma dei contratti pubblici dell'Autorità per gli affidamenti diretti di importo inferiore a 5.000 euro;\n\nDATO ATTO, altresì, che per la presente procedura è stato acquisito il codice identificativo di gara B7T4R2S9Q1;\n\nVISTO il preventivo formulato dall'operatore economico Verde Sicuro Srl, con sede a Borgoverde, in via delle Querce, n. 12, che propone di eseguire la prestazione al prezzo di 3.200,00 euro, oltre IVA ai sensi di legge;\n\nRITENUTA congrua l'offerta, considerate le modalità e i tempi di esecuzione dell'appalto;\n\nDATO ATTO che il sottoscritto è il Responsabile unico del progetto, ai sensi dell'articolo 15 del decreto legislativo 31 marzo 2023, n. 36;\n\nCONSIDERATO che l'operatore economico ha presentato la dichiarazione sostitutiva di atto di notorietà sul possesso dei requisiti di partecipazione e di qualificazione;\n\nVERIFICATO che l'operatore economico:\n- non presenta annotazioni riservate nel casellario informatico dell'Autorità nazionale anticorruzione;\n- è in regola con il versamento dei contributi previdenziali, come risulta dal documento unico di regolarità contributiva;\n- ha la necessaria idoneità professionale, come risulta dalla visura camerale agli atti;\n- ha un'esperienza pregressa adeguata all'esecuzione delle prestazioni;\n\nRITENUTO di ricorrere all'affidamento diretto, ai sensi dell'articolo 50, comma 1, lettera b), del decreto legislativo 31 marzo 2023, n. 36;\n\nDATO ATTO che, ai sensi dell'articolo 6-bis della legge 7 agosto 1990, n. 241, e dell'articolo 16 del decreto legislativo 31 marzo 2023, n. 36, il sottoscritto non si trova in alcuna situazione di conflitto di interessi in relazione alla procedura;\n\nVISTI gli articoli 182 e seguenti del decreto legislativo 18 agosto 2000, n. 267, che disciplinano le fasi della spesa;\n\nDATO ATTO che sussistono le condizioni per assumere l'impegno di spesa, in quanto il soggetto, la ragione del debito e la somma da pagare sono determinati, il debito è esigibile nel corrente esercizio e il capitolo di spesa presenta sufficiente disponibilità;\n\nRITENUTO di esprimere parere favorevole, ai fini del controllo preventivo di cui all'articolo 147-bis del decreto legislativo 18 agosto 2000, n. 267, sulla regolarità amministrativa del presente provvedimento;\n\nDETERMINA\n\n1. di contrarre per l'acquisizione, mediante contratto di appalto, del servizio di abbattimento di un albero pericolante nell'area verde di via dei Tigli;\n2. di stabilire che il fine del contratto è tutelare l'incolumità pubblica e il patrimonio pubblico e privato; che la scelta del contraente avviene con l'affidamento diretto, ai sensi dell'articolo 50, comma 1, lettera b), del decreto legislativo 31 marzo 2023, n. 36; che il contratto è sottoscritto mediante corrispondenza secondo l'uso commerciale, anche con la posta elettronica certificata, ed è esente dall'imposta di bollo in quanto sotto la soglia di 40.000 euro;\n3. di affidare il contratto all'operatore economico Verde Sicuro Srl, con sede a Borgoverde, in via delle Querce, n. 12, codice fiscale e partita IVA 03456789012, al prezzo di 3.200,00 euro oltre IVA al 22%, pari a 704,00 euro, per complessivi 3.904,00 euro (euro tremilanovecentoquattro/00);\n4. di dare atto che la determinazione rispetta l'articolo 9, comma 1, lettera a), punto 2, del decreto-legge 1° luglio 2009, n. 78, convertito, con modificazioni, dalla legge 3 agosto 2009, n. 102, sulla tempestività dei pagamenti;\n5. di impegnare la spesa complessiva di 3.904,00 euro, IVA compresa, a favore del suddetto operatore economico, imputandola all'esercizio finanziario 2026 del bilancio di previsione 2026-2028, missione 10, programma 5, titolo 1, capitolo 2008;\n6. di dare atto che, ai sensi dell'articolo 183, comma 8, del decreto legislativo 18 agosto 2000, n. 267, è stata accertata la compatibilità del programma dei pagamenti con gli stanziamenti di cassa e con le regole di finanza pubblica."
+          }
+        ]
+      }
+    }
+  ]
+}
