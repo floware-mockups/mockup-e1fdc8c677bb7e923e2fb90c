@@ -138,6 +138,16 @@
               "scope": "firma",
               "date": true
             }
+          },
+          {
+            "label": "Regolarità contributiva verificata",
+            "hint": "Regolarità contributiva verificata: non risulta dall'atto.",
+            "auto": {
+              "yes": [
+                "regolarità contributiva",
+                "documento unico di regolarità contributiva"
+              ]
+            }
           }
         ],
         "irregularAbove": 2,
@@ -167,6 +177,122 @@
           }
         ]
       }
+    },
+    {
+      "id": "date-atti",
+      "title": "Date degli atti",
+      "description": "Registro dimostrativo delle date associate agli atti controllati. Dati conservati solo in memoria.",
+      "metrics": [],
+      "columns": [
+        "Atto",
+        "Data dell’atto"
+      ],
+      "rows": [
+        [
+          "Determinazione n. 41/2026 – Fornitura di cancelleria",
+          "—"
+        ],
+        [
+          "Determinazione n. 57/2026 – Manutenzione delle strade",
+          "—"
+        ],
+        [
+          "Determinazione n. 63/2026 – Rinnovo del software di protocollo",
+          "—"
+        ],
+        [
+          "Determinazione n. 87/2026 – Abbattimento di un albero pericolante",
+          "—"
+        ]
+      ],
+      "form": [
+        "Atto",
+        "Data dell’atto"
+      ]
+    },
+    {
+      "id": "utenti",
+      "title": "Utenti",
+      "description": "Elenco dimostrativo degli utenti e dei rispettivi ruoli e account.",
+      "metrics": [
+        {
+          "label": "Utenti registrati",
+          "value": "6"
+        },
+        {
+          "label": "Account attivi",
+          "value": "4"
+        },
+        {
+          "label": "In attesa",
+          "value": "1"
+        }
+      ],
+      "columns": [
+        "Nome utente",
+        "Ruolo",
+        "Ufficio",
+        "Stato"
+      ],
+      "rows": [
+        [
+          "Giulia Moretti",
+          "Responsabile di Area",
+          "Area Tecnica",
+          "Attivo"
+        ],
+        [
+          "Paolo Ferri",
+          "Istruttore amministrativo",
+          "Segreteria",
+          "Attivo"
+        ],
+        [
+          "Elena Riva",
+          "Operatrice",
+          "Area Tecnica",
+          "In attesa"
+        ],
+        [
+          "Luca Conti",
+          "Responsabile di Area",
+          "Servizi finanziari",
+          "Attivo"
+        ],
+        [
+          "Sara Neri",
+          "Istruttrice amministrativa",
+          "Segreteria",
+          "Disattivato"
+        ],
+        [
+          "Marta Galli",
+          "Operatrice",
+          "Servizi finanziari",
+          "Attivo"
+        ]
+      ],
+      "form": [
+        "Nome utente",
+        "Ruolo",
+        "Ufficio",
+        "Stato"
+      ],
+      "statusColumn": 3
+    }
+  ],
+  "theme": {
+    "palette": "bordeaux-oro",
+    "fonts": "istituzionale"
+  },
+  "custom": [
+    {
+      "name": "CalendarioDataAtto",
+      "title": "Data dell’atto",
+      "description": "Calendario con conferma della data e collegamento esplicito all’atto selezionato.",
+      "role": "section",
+      "pageId": "controllo",
+      "position": "top"
     }
   ]
 }

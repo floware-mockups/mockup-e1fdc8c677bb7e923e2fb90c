@@ -1,10 +1,28 @@
-import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
+// v7: per primo, così il token dell'assistente lascia l'indirizzo prima di ogni altro modulo.
+import { agentToken } from "./token";
+import { Component, useState, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore, lazy, Suspense, type ComponentType, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import rawSeed from "./spec.json";
-type MockupData = {title:string;description:string;accent:string;theme?:{palette:string;fonts:string};resetPlacement?:string;navigation?:string;pages:{id:string;title:string;description:string;metrics:{label:string;value:string}[];columns:string[];rows:string[][];form:string[];sections?:string[];view?:string;statusColumn?:number;chartColumn?:number}[]};
+type MockupData = {title:string;description:string;accent:string;theme?:{palette:string;fonts:string};resetPlacement?:string;navigation?:string;custom?:{name:string;title:string;description:string;role:string;pageId?:string;position?:string;events?:string[];column?:string}[];pages:{id:string;title:string;description:string;metrics:{label:string;value:string}[];columns:string[];rows:string[][];form:string[];sections?:string[];view?:string;statusColumn?:number;chartColumn?:number}[]};
 const seed: MockupData = rawSeed;
 import "./style.css";
 import "./theme.css";
+// v7 (WZ-2123): componenti su misura scritti dall'assistente avanzato in src/custom/,
+// richiamati per nome dalla specifica e agganciati ai cinque ruoli qui sotto.
+import {
+  Button,
+  CustomSlotContext,
+  Dialog,
+  FlowareRuntime,
+  customComponentStopped,
+  newCustomSlot,
+  stopCustomComponent,
+  subscribeCustomStops,
+  type CustomAction,
+  type Runtime,
+} from "./floware";
+import { customTextAttributes, customTextsPhishing } from "./customGuard";
+import { customComponents, preloadCustomComponents } from "./custom";
 import {
   chartBars,
   chartColumnOf,
@@ -23,18 +41,18 @@ import {
 // v6: assistente AI (docs/mockup-ai-agent.md §2.2). La rete è solo in
 // src/agent/gateway.ts, verso il gateway fissato alla build.
 import type { AgentBridge } from "./agent/AgentPanel";
-import { addAgentRecord, agentGatewayOrigin, captureAgentToken } from "./agent/boot";
+import { addAgentRecord, agentGatewayOrigin } from "./agent/boot";
 // Il pannello si carica a parte: il bundle iniziale resta quasi quello di v5.
 const AgentPanel = lazy(() => import("./agent/AgentPanel").then((m) => ({ default: m.AgentPanel })));
+// Il token arriva come #fa=<token>: src/token.ts lo toglie dall'indirizzo prima che il
+// prototipo legga l'hash per la navigazione (e prima dei componenti su misura).
 // WZ-2126: tipi di pagina (scadenzario, lista di controllo…), caricati a parte
 // solo se il prototipo ne ha. Dati in memoria e, se si può, nel browser.
 import { clearKindStates, kindStorageKey } from "./kinds/storage";
 import { createKindAi } from "./kinds/ai";
 const MockupKindPage = lazy(() => import("./kinds/index").then((m) => ({ default: m.MockupKindPage })));
 const kindOf = (page: object) => typeof Reflect.get(page, "kind") === "string";
-// Il token arriva come #fa=<token>: si toglie dall'indirizzo prima che il
-// prototipo legga l'hash per la navigazione, e resta solo in memoria.
-const agentToken = captureAgentToken(location, history);
+// Lo stesso token catturato da src/token.ts (una sola cattura: dopo, l'indirizzo non lo ha più).
 const kindAi = createKindAi(agentGatewayOrigin, agentToken);
 // WZ-2039: palette e font sono token CSS (theme.css); la struttura non cambia.
 // Senza tema resta l'aspetto storico, con l'accento scelto dal modello.
@@ -64,13 +82,140 @@ const resetPlacement =
   Reflect.get(seed, "resetPlacement") === "top" ? "top" : "bottom";
 // WZ-2088: navigazione in alto o laterale (predefinita).
 const topNavigation = Reflect.get(seed, "navigation") === "top";
+// WZ-2123: descrizione dei componenti su misura (il codice è in src/custom/). Un
+// componente senza file nel registro è ignorato: il prototipo resta quello standard.
+type CustomMeta = {
+  name: string;
+  title: string;
+  role: "section" | "confirm" | "detail" | "cell" | "floating";
+  pageId?: string;
+  position?: string;
+  events?: string[];
+  column?: string;
+};
+const rawCustom = Reflect.get(seed, "custom");
+const customs: CustomMeta[] = (Array.isArray(rawCustom) ? (rawCustom as CustomMeta[]) : []).filter(
+  (c) => c && typeof c.name === "string" && Object.prototype.hasOwnProperty.call(customComponents, c.name) && customComponents[c.name] != null,
+);
+const foldName = (text: string) =>
+  String(text ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+const onPage = (c: CustomMeta, pageId: string) => !c.pageId || c.pageId === pageId;
+// Un errore in un componente su misura mostra un riquadro (o il comportamento
+// standard, per conferme e dettaglio) e non ferma il resto del prototipo.
+class CustomBoundary extends Component<{ title: string; fallback?: ReactNode; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    // fallback={null} vale: il componente rotto sparisce senza riquadro.
+    if ("fallback" in this.props) return this.props.fallback;
+    return (
+      (
+        <p role="note" data-testid="custom-unavailable" className="my-4 rounded-lg border border-dashed border-(--mk-border) p-3 text-sm text-(--mk-muted)">
+          «{this.props.title}» non è disponibile in questo prototipo.
+        </p>
+      )
+    );
+  }
+}
+// Valori nuovi per ogni componente su misura: copie dei dati (righe, azione) e funzioni
+// proprie, così il componente non riceve mai oggetti che il template continua a usare.
+const customValue = (value: unknown, depth = 0): unknown => {
+  if (typeof value === "function") return () => (value as () => unknown)();
+  if (Array.isArray(value)) return depth > 3 ? [] : value.map((item) => customValue(item, depth + 1));
+  if (value && typeof value === "object") return depth > 3 ? {} : Object.fromEntries(Object.entries(value).map(([k, v]) => [k, customValue(v, depth + 1)]));
+  return value;
+};
+// Ogni componente su misura sta in un riquadro contenuto e di misura limitata: ciò che
+// disegna non esce dal suo spazio (contain: paint fa da contenitore anche per gli elementi
+// fixed e absolute) e il riquadro non diventa grande come la pagina: oltre il limite
+// scorre. Le finestre dell'API (Dialog, Drawer) escono con un portal.
+const smallBox = { contain: "paint", maxWidth: "min(24rem, 100%)", maxHeight: "min(70vh, 32rem)", overflow: "auto", pointerEvents: "auto" } as const;
+const customBoxes = {
+  section: { contain: "paint", maxHeight: "min(80vh, 48rem)", overflow: "auto" },
+  // L'elemento fisso sta sopra la pagina: su un telefono resta piccolo (vedi il contenitore).
+  floating: { ...smallBox, maxWidth: "100%", maxHeight: "min(40vh, 20rem)" },
+  confirm: smallBox,
+  detail: smallBox,
+  cell: { ...smallBox, display: "inline-block", verticalAlign: "top" },
+} as const;
+// Un componente escluso (vedi stopCustomComponent in src/floware.tsx) lascia il posto al
+// riquadro di errore o al comportamento standard del suo ErrorBoundary.
+function Stopped(): ReactNode {
+  throw new Error("custom_component_stopped");
+}
+function CustomSlot({ meta, props, fallback }: { meta: CustomMeta; props: Record<string, unknown>; fallback?: ReactNode }) {
+  const Custom = customComponents[meta.name] as unknown as ComponentType<Record<string, unknown>>;
+  // Stato del riquadro per le finestre del componente (gesti, chiusure): uno per punto di
+  // aggancio, quindi nuovo a ogni conferma o dettaglio aperto dall'utente.
+  const [slot] = useState(() => newCustomSlot(meta.name));
+  const stopped = useSyncExternalStore(subscribeCustomStops, () => customComponentStopped(meta.name));
+  // Il componente si carica a parte: intanto la cella mostra il suo valore, il resto niente.
+  const loading = meta.role === "cell" ? (props.value as ReactNode) : null;
+  const boundary = fallback === undefined ? {} : { fallback };
+  // Dopo ogni rendering il testo completo del riquadro e delle sue finestre (anche ricomposto
+  // da più pezzi) non deve essere da modulo di accesso o di pagamento: se lo è, il
+  // componente si esclude prima che il browser lo mostri.
+  const box = useRef<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const root = box.current;
+    if (!root || stopped) return;
+    const check = () => {
+      const roots = [root, ...slot.portals];
+      if (!customTextsPhishing(roots)) return;
+      for (const node of roots) if (node instanceof HTMLElement) node.style.visibility = "hidden";
+      stopCustomComponent(meta.name, "testi da modulo di accesso o di pagamento");
+    };
+    const observer = new MutationObserver(check);
+    const options = { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: customTextAttributes };
+    observer.observe(root, options);
+    for (const portal of slot.portals) observer.observe(portal, options);
+    slot.watch = (portal) => {
+      observer.observe(portal, options);
+      check();
+    };
+    check();
+    return () => {
+      observer.disconnect();
+      slot.watch = undefined;
+    };
+  }, [slot, stopped, meta.name]);
+  // Il contesto avvolge solo il componente: il comportamento standard (fallback) resta del template.
+  const content = stopped ? (
+    <Stopped />
+  ) : (
+    <CustomSlotContext.Provider value={slot}>
+      <Suspense fallback={loading}>
+        <Custom {...(customValue(props) as Record<string, unknown>)} />
+      </Suspense>
+    </CustomSlotContext.Provider>
+  );
+  return (
+    <CustomBoundary title={meta.title} {...boundary}>
+      {meta.role === "cell" ? (
+        <span ref={box} data-custom-box="cell" style={customBoxes.cell}>
+          {content}
+        </span>
+      ) : (
+        <div ref={box as React.RefObject<HTMLDivElement>} data-custom-box={meta.role} style={customBoxes[meta.role]}>
+          {content}
+        </div>
+      )}
+    </CustomBoundary>
+  );
+}
 function App() {
   const [pages, setPages] = useState(structuredClone(seed.pages));
   const [active, setActive] = useState(
     location.hash.slice(1) || seed.pages[0].id,
   );
   const [table, setTable] = useState<MockupTableState>(emptyTableState);
-  const [detail, setDetail] = useState<number | null>(null);
+  // v7: il dettaglio ricorda la pagina, così un componente può aprire il dettaglio
+  // di una riga di un'altra pagina (dati collegati).
+  const [detail, setDetailState] = useState<{ pageId: string; index: number } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ action: CustomAction; apply: () => void; meta: CustomMeta } | null>(null);
   const [message, setMessage] = useState("");
   // «Ripristina demo» fa ripartire da capo anche i tipi di pagina.
   const [resets, setResets] = useState(0);
@@ -78,6 +223,10 @@ function App() {
   useEffect(() => {
     pagesRef.current = pages;
   }, [pages]);
+  // v7: i componenti su misura si caricano a parte; li si scarica subito dopo l'avvio.
+  useEffect(() => {
+    preloadCustomComponents();
+  }, []);
   // Ponte stabile fra l'assistente e i dati del prototipo (solo in memoria).
   const agentBridge = useMemo<AgentBridge>(() => ({
     onRecord: (record) => {
@@ -93,11 +242,16 @@ function App() {
       setPages((current) => current.map((p, i) => (i === 0 ? { ...p, metrics: metrics.slice(0, 6) } : p)));
     },
   }), []);
+  const page = pages.find((p) => p.id === active) ?? pages[0];
+  const setDetail = (index: number | null) => setDetailState(index === null ? null : { pageId: page.id, index });
   useEffect(() => {
     const changed = () => {
-      setActive(location.hash.slice(1));
+      const next = location.hash.slice(1);
+      setActive(next);
       setTable(emptyTableState);
-      setDetail(null);
+      // Il dettaglio aperto da un componente su un'altra pagina resta aperto.
+      setDetailState((d) => (d && d.pageId === next ? d : null));
+      setPendingAction(null);
       setMessage("");
     };
     window.addEventListener("hashchange", changed);
@@ -105,15 +259,58 @@ function App() {
   }, []);
   useEffect(() => {
     if (detail === null) return;
-    const close = (e: KeyboardEvent) => e.key === "Escape" && setDetail(null);
+    const close = (e: KeyboardEvent) => e.key === "Escape" && setDetailState(null);
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [detail]);
-  const page = pages.find((p) => p.id === active) ?? pages[0];
-  const setRows = (rows: string[][], done: string) => {
-    setPages(pages.map((p) => (p.id === page.id ? { ...p, rows } : p)));
-    setMessage(done);
+  // Aggiornamento funzionale sullo stato corrente: più scritture nello stesso gestore
+  // (due setCell, due addRow) si sommano invece di sovrascriversi.
+  const setRowsOf = (pageId: string, update: (rows: string[][]) => string[][], done?: string) => {
+    setPages((current) => current.map((p) => (p.id === pageId ? { ...p, rows: update(p.rows) } : p)));
+    if (done) setMessage(done);
   };
+  // Stato condiviso con i componenti su misura (src/floware.tsx).
+  const runtime: Runtime = {
+    title: seed.title,
+    pages,
+    pageId: page.id,
+    setRows: setRowsOf,
+    navigate: (pageId) => {
+      if (pages.some((p) => p.id === pageId)) location.hash = pageId;
+    },
+    openDetail: (pageId, index) => {
+      const target = pages.find((p) => p.id === pageId);
+      if (!target || !target.rows[index]) return;
+      setDetailState({ pageId, index });
+      if (pageId !== page.id) location.hash = pageId;
+    },
+    notify: (text) => setMessage(String(text ?? "").slice(0, 200)),
+  };
+  // Un componente di conferma, se c'è, si apre prima dell'azione; altrimenti l'azione parte subito.
+  const confirmFor = (kind: CustomAction["kind"]) =>
+    customs.find((c) => c.role === "confirm" && onPage(c, page.id) && (c.events?.length ? c.events : ["status"]).includes(kind));
+  const request = (action: CustomAction, apply: () => void) => {
+    const meta = confirmFor(action.kind);
+    if (!meta) return apply();
+    setPendingAction({ action, apply, meta });
+  };
+  const cellMeta = (column: number) =>
+    customs.find((c) => c.role === "cell" && onPage(c, page.id) && foldName(c.column ?? "") === foldName(page.columns[column] ?? ""));
+  const cellView = (value: string, column: number, rowIndex: number) => {
+    const meta = cellMeta(column);
+    if (!meta) return value;
+    return <CustomSlot meta={meta} props={{ pageId: page.id, rowIndex, column: page.columns[column], value, row: page.rows[rowIndex] }} fallback={value} />;
+  };
+  const sectionsAt = (position: string) =>
+    customs
+      .filter((c) => c.role === "section" && onPage(c, page.id) && (c.position ?? "bottom") === position)
+      .map((meta) => (
+        <div key={meta.name} data-custom={meta.name}>
+          <CustomSlot meta={meta} props={{ pageId: page.id }} />
+        </div>
+      ));
+  // Un solo elemento fisso per pagina (la specifica non ne ammette di più): il primo.
+  const floating = customs.filter((c) => c.role === "floating" && onPage(c, page.id)).slice(0, 1);
   const status = statusColumnOf(page);
   const statuses = distinctValues(page.rows, status);
   const items = visibleRows(page, table);
@@ -124,7 +321,19 @@ function App() {
       {status >= 0 && statuses.length > 1 && (
         <button
           className="font-medium text-(--mk-primary)"
-          onClick={() => setRows(withNextStatus(page, index), "Stato aggiornato nella demo")}
+          onClick={() => {
+            const rows = withNextStatus(page, index);
+            const pageId = page.id;
+            request(
+              { kind: "status", pageId, rowIndex: index, row: page.rows[index], from: page.rows[index][status], to: rows[index][status] },
+              // Calcolato sullo stato al momento della conferma: le modifiche fatte nel
+              // frattempo dal componente (per esempio una nota) restano.
+              () => {
+                setPages((current) => current.map((p) => (p.id === pageId ? { ...p, rows: withNextStatus(p, index) } : p)));
+                setMessage("Stato aggiornato nella demo");
+              },
+            );
+          }}
         >
           Cambia stato
         </button>
@@ -134,10 +343,14 @@ function App() {
       </button>
       <button
         className="font-medium text-(--mk-danger)"
-        onClick={() => {
-          setRows(page.rows.filter((_, i) => i !== index), "Elemento rimosso dalla demo");
-          setDetail(null);
-        }}
+        onClick={() =>
+          request({ kind: "remove", pageId: page.id, rowIndex: index, row: page.rows[index] }, () => {
+            const pageId = page.id;
+            setPages((current) => current.map((p) => (p.id === pageId ? { ...p, rows: p.rows.filter((_, i) => i !== index) } : p)));
+            setMessage("Elemento rimosso dalla demo");
+            setDetailState(null);
+          })
+        }
       >
         Rimuovi
       </button>
@@ -145,12 +358,12 @@ function App() {
   );
   const rowCard = (row: string[], index: number) => (
     <article key={index} className={`${card} grid gap-2 p-4`}>
-      <h4 className="font-semibold">{row[0]}</h4>
+      <h4 className="font-semibold">{cellView(row[0], 0, index)}</h4>
       <dl className="grid gap-1 text-sm">
         {row.slice(1).map((cell, i) => (
           <div key={i} className="flex justify-between gap-3">
             <dt className="text-(--mk-muted)">{page.columns[i + 1]}</dt>
-            <dd className="text-right">{cell}</dd>
+            <dd className="text-right">{cellView(cell, i + 1, index)}</dd>
           </div>
         ))}
       </dl>
@@ -196,8 +409,36 @@ function App() {
       IBAN. Le modifiche durano soltanto in questa sessione.
     </p>
   );
-  const shown = detail === null ? undefined : page.rows[detail];
+  const shown = detail === null || detail.pageId !== page.id ? undefined : page.rows[detail.index];
+  // v7: un componente su misura con ruolo «detail» sostituisce questa finestra (per
+  // esempio un pannello laterale); se non si carica resta la finestra standard.
+  const detailMeta = customs.find((c) => c.role === "detail" && onPage(c, page.id));
+  const builtInDetail = shown && (
+    <div className="fixed inset-0 z-10 grid place-items-center bg-black/40 p-4" onClick={() => setDetail(null)}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Dettaglio di ${shown[0]}`}
+        className={`${card} w-full max-w-md p-6`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 className="mb-4 text-lg font-semibold">{shown[0]}</h3>
+        <dl className="grid gap-2 text-sm">
+          {page.columns.map((c, i) => (
+            <div key={i} className="flex justify-between gap-3">
+              <dt className="text-(--mk-muted)">{c}</dt>
+              <dd className="text-right">{shown[i]}</dd>
+            </div>
+          ))}
+        </dl>
+        <button autoFocus className={`mt-6 rounded-lg px-4 py-2 ${color}`} onClick={() => setDetail(null)}>
+          Chiudi
+        </button>
+      </div>
+    </div>
+  );
   return (
+    <FlowareRuntime.Provider value={runtime}>
     <div className={`min-h-screen bg-(--mk-bg) text-(--mk-text) ${topNavigation ? "" : "md:flex"}`}>
       <aside
         className={
@@ -234,6 +475,7 @@ function App() {
         </p>
         <h2 className="text-3xl font-bold">{page.title}</h2>
         <p className="mt-2 text-(--mk-muted)">{page.description}</p>
+        {sectionsAt("top")}
         {kindOf(page) && (
           <Suspense fallback={<p className="mt-8 text-(--mk-muted)">Caricamento…</p>}>
             <MockupKindPage key={`${page.id}-${resets}`} page={page} ai={kindAi} storageKey={kindStorageKey(page)} />
@@ -327,7 +569,7 @@ function App() {
                             <tr key={index} className="border-t border-(--mk-divider)">
                               {row.map((cell, i) => (
                                 <td key={i} className="px-5 py-4">
-                                  {cell}
+                                  {cellView(cell, i, index)}
                                 </td>
                               ))}
                               <td className="px-5 py-4">{actions(index)}</td>
@@ -374,8 +616,12 @@ function App() {
                       page,
                       page.form.map((_, i) => String(data.get(`field-${i}`) ?? "")),
                     );
-                    setRows([...page.rows, row], "Esempio aggiunto nella sessione");
-                    form.reset();
+                    const pageId = page.id;
+                    request({ kind: "add", pageId, rowIndex: page.rows.length, row }, () => {
+                      setPages((current) => current.map((p) => (p.id === pageId ? { ...p, rows: [...p.rows, row] } : p)));
+                      setMessage("Esempio aggiunto nella sessione");
+                      form.reset();
+                    });
                   }}
                 >
                   {page.form.map((f, i) => {
@@ -420,34 +666,38 @@ function App() {
                 </form>
               </section>
             )}
+            {sectionsAt(section)}
           </div>
         ))}
+        {sectionsAt("bottom")}
         <p role="status" className="mt-5 text-sm text-(--mk-muted)">
           {message}
         </p>
       </main>
-      {shown && (
-        <div className="fixed inset-0 z-10 grid place-items-center bg-black/40 p-4" onClick={() => setDetail(null)}>
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Dettaglio di ${shown[0]}`}
-            className={`${card} w-full max-w-md p-6`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="mb-4 text-lg font-semibold">{shown[0]}</h3>
-            <dl className="grid gap-2 text-sm">
-              {page.columns.map((c, i) => (
-                <div key={i} className="flex justify-between gap-3">
-                  <dt className="text-(--mk-muted)">{c}</dt>
-                  <dd className="text-right">{shown[i]}</dd>
-                </div>
-              ))}
-            </dl>
-            <button autoFocus className={`mt-6 rounded-lg px-4 py-2 ${color}`} onClick={() => setDetail(null)}>
-              Chiudi
-            </button>
-          </div>
+      {pendingAction && (
+        <PendingConfirm key={`${pendingAction.action.kind}-${pendingAction.action.rowIndex}`} pending={pendingAction} onDone={() => setPendingAction(null)} />
+      )}
+      {shown && detailMeta && detail && (
+        <CustomSlot
+          meta={detailMeta}
+          props={{ pageId: page.id, rowIndex: detail.index, row: shown, close: () => setDetailState(null) }}
+          fallback={builtInDetail}
+        />
+      )}
+      {shown && !detailMeta && builtInDetail}
+      {floating.length > 0 && (
+        // Gli elementi fissi stanno nel contenitore del template, in basso a destra: un
+        // componente non si posiziona da solo (niente fixed, sticky o z-index alti).
+        // Misura limitata (al massimo min(40vh, 20rem) di altezza, 20rem di larghezza su un
+        // telefono, 24rem dagli schermi più larghi), il resto si taglia; i clic passano
+        // attraverso le parti vuote: solo il riquadro del componente li riceve.
+        <div
+          data-custom-floating
+          className="pointer-events-none fixed right-4 bottom-4 z-30 flex max-h-[min(40vh,20rem)] w-[min(20rem,calc(100vw-2rem))] flex-col items-end gap-2 overflow-hidden sm:w-[min(24rem,calc(100vw-2rem))]"
+        >
+          {floating.map((meta) => (
+            <CustomSlot key={meta.name} meta={meta} props={{ pageId: page.id }} fallback={null} />
+          ))}
         </div>
       )}
       {agentGatewayOrigin && (
@@ -456,6 +706,29 @@ function App() {
         </Suspense>
       )}
     </div>
+    </FlowareRuntime.Provider>
   );
+}
+// v7: conferma di un'azione con il componente su misura; se il componente non si
+// carica resta la conferma standard. L'azione parte al massimo una volta.
+function PendingConfirm({ pending, onDone }: { pending: { action: CustomAction; apply: () => void; meta: CustomMeta }; onDone: () => void }) {
+  const done = useRef(false);
+  const confirm = () => {
+    if (done.current) return;
+    done.current = true;
+    pending.apply();
+    onDone();
+  };
+  const cancel = () => {
+    if (done.current) return;
+    done.current = true;
+    onDone();
+  };
+  const standard = (
+    <Dialog title="Confermi?" onClose={cancel} footer={<><Button variant="secondary" onClick={cancel}>Annulla</Button><Button onClick={confirm} autoFocus>Conferma</Button></>}>
+      <p>{pending.action.kind === "status" ? `Lo stato passa da «${pending.action.from ?? ""}» a «${pending.action.to ?? ""}».` : pending.action.kind === "remove" ? "L'elemento viene rimosso dalla demo." : "L'esempio viene aggiunto alla demo."}</p>
+    </Dialog>
+  );
+  return <CustomSlot meta={pending.meta} props={{ action: pending.action, confirm, cancel }} fallback={standard} />;
 }
 createRoot(document.getElementById("root")!).render(<App />);
