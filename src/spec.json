@@ -80,7 +80,8 @@
                 "text": "codice identificativo di gara",
                 "length": 10
               }
-            }
+            },
+            "critical": true
           },
           {
             "label": "Rispetto della rotazione del fornitore",
